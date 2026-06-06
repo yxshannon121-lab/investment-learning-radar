@@ -1,0 +1,71 @@
+name: Investment Learning Radar Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Command to run: dashboard, morning, premarket, weekly, fetch, track"
+        required: true
+        default: "dashboard"
+  schedule:
+    # Helsinki 08:30. Summer UTC+3 => 05:30 UTC; winter UTC+2 => 06:30 UTC.
+    - cron: "30 5,6 * * *"
+    # Helsinki 15:30. Summer UTC+3 => 12:30 UTC; winter UTC+2 => 13:30 UTC.
+    - cron: "30 12,13 * * *"
+    # Sunday weekly refresh at Helsinki 09:00. Summer UTC+3 => 06:00 UTC; winter UTC+2 => 07:00 UTC.
+    - cron: "0 6,7 * * 0"
+
+jobs:
+  update-dashboard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      DATABASE_URL: sqlite:///data/investment_radar.sqlite3
+      TIMEZONE: Europe/Helsinki
+      EMAIL_DRY_RUN: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Select command
+        id: select
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "cmd=${{ github.event.inputs.command }}" >> "$GITHUB_OUTPUT"
+            echo "args=" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 5,6 * * *" ]; then
+            echo "cmd=morning" >> "$GITHUB_OUTPUT"
+            echo "args=--only-if-local-time 08:30" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 12,13 * * *" ]; then
+            echo "cmd=premarket" >> "$GITHUB_OUTPUT"
+            echo "args=--only-if-local-time 15:30" >> "$GITHUB_OUTPUT"
+          else
+            echo "cmd=weekly" >> "$GITHUB_OUTPUT"
+            echo "args=--only-if-local-time 09:00 --only-weekday Sunday" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update static dashboard
+        run: python main.py ${{ steps.select.outputs.cmd }} ${{ steps.select.outputs.args }}
+
+      - name: Commit dashboard update
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html docs/dashboard.html
+          git add -f data/investment_radar.sqlite3 || true
+          if git diff --cached --quiet; then
+            echo "No dashboard changes to commit."
+          else
+            git commit -m "Update investment learning dashboard"
+            git push
+          fi
