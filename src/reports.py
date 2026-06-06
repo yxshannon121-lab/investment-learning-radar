@@ -147,7 +147,17 @@ AI 分析：
 
 
 def analyze_due_news(settings: Settings, db: Database) -> int:
-    rows = db.high_score_unanalyzed(settings.min_ai_score, settings.report_lookback_hours, settings.max_report_items)
+    if not settings.openai_api_key:
+        return 0
+
+    analysis_lookback_hours = max(settings.report_lookback_hours, 24 * 7)
+    analysis_limit = max(settings.max_report_items, 20)
+    rows = db.high_score_unanalyzed(
+        settings.min_ai_score,
+        analysis_lookback_hours,
+        analysis_limit,
+        retry_missing_key_fallbacks=True,
+    )
     analyzed = 0
     for row in rows:
         analysis = analyze_news_row(row, settings)
