@@ -203,15 +203,31 @@ class Database:
                 (threshold, limit),
             ).fetchall()
 
-    def high_score_unanalyzed(self, min_score: float, lookback_hours: int, limit: int) -> list[sqlite3.Row]:
+    def high_score_unanalyzed(
+        self,
+        min_score: float,
+        lookback_hours: int,
+        limit: int,
+        retry_missing_key_fallbacks: bool = False,
+    ) -> list[sqlite3.Row]:
         threshold = dt_to_db(utc_now() - timedelta(hours=lookback_hours))
+        if retry_missing_key_fallbacks:
+            analyzed_filter = """
+                  AND (
+                    analyzed_at IS NULL
+                    OR confirmed_facts LIKE '%缺少 OPENAI_API_KEY%'
+                    OR ai_summary LIKE '%缺少 OPENAI_API_KEY%'
+                  )
+            """
+        else:
+            analyzed_filter = "AND analyzed_at IS NULL"
         with self.connect() as conn:
             return conn.execute(
-                """
+                f"""
                 SELECT * FROM news
                 WHERE published_at >= ?
                   AND score >= ?
-                  AND analyzed_at IS NULL
+                  {analyzed_filter}
                 ORDER BY score DESC, published_at DESC
                 LIMIT ?
                 """,
@@ -308,4 +324,3 @@ class Database:
 
 def ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-
