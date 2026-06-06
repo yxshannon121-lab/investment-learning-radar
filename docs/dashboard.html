@@ -4,11 +4,1646 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Investment Learning Radar</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #5c667a;
+      --line: #d8dee9;
+      --accent: #0f766e;
+      --accent-soft: #e7f5f3;
+      --warn: #8a4b00;
+      --warn-soft: #fff4df;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+    .wrap {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+    .hero {
+      padding: 28px 0 20px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 40px);
+      letter-spacing: 0;
+    }
+    .subhead {
+      margin: 0;
+      color: var(--muted);
+      max-width: 780px;
+    }
+    .notice {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border: 1px solid #f1c987;
+      background: var(--warn-soft);
+      color: var(--warn);
+      border-radius: 8px;
+      font-weight: 700;
+    }
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 0 0 18px;
+    }
+    nav a {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid #b8dfd9;
+      border-radius: 8px;
+      padding: 8px 10px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    main {
+      padding: 22px 0 38px;
+    }
+    .page-section {
+      margin-bottom: 34px;
+    }
+    .section-title {
+      margin-bottom: 14px;
+    }
+    .section-title h2 {
+      margin: 0 0 4px;
+      font-size: 24px;
+    }
+    .section-title p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .news-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(23, 32, 51, 0.05);
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .card-head h3 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.35;
+    }
+    .score {
+      flex: 0 0 auto;
+      background: #eef2ff;
+      color: #3730a3;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
+      margin: 0 0 14px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .meta .wide {
+      grid-column: 1 / -1;
+    }
+    dt {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    dd {
+      margin: 2px 0 0;
+      overflow-wrap: anywhere;
+    }
+    a { color: #0b66c3; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    h4 {
+      margin: 12px 0 6px;
+      font-size: 15px;
+    }
+    p, ul {
+      margin-top: 0;
+    }
+    .chips {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .chips div {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fcfdff;
+    }
+    .chips span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .chips b {
+      display: block;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 620px;
+      background: #fff;
+    }
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      background: #f9fafb;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .muted, .empty {
+      color: var(--muted);
+    }
+    footer {
+      border-top: 1px solid var(--line);
+      background: #ffffff;
+      padding: 18px 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    @media (max-width: 820px) {
+      .grid, .chips, .meta {
+        grid-template-columns: 1fr;
+      }
+      .card-head {
+        display: block;
+      }
+      .score {
+        display: inline-block;
+        margin-top: 8px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Investment Learning Radar</h1>
-  <p>静态网页入口已创建。运行 <code>python main.py dashboard</code> 后，这个页面会被真实新闻 dashboard 覆盖。</p>
-  <p><strong>本页面仅用于投资学习，不构成投资建议。</strong></p>
+  <header>
+    <div class="wrap hero">
+      <h1>Investment Learning Radar</h1>
+      <p class="subhead">真实新闻来源、AI 辅助分析、ETF 和个股后续表现追踪。生成时间：2026-06-06 17:13 EEST</p>
+      <div class="notice">本页面仅用于投资学习，不构成投资建议。</div>
+    </div>
+    <nav class="wrap" aria-label="Dashboard sections">
+      <a href="#今日晨报">今日晨报</a>
+      <a href="#美股盘前观察">美股盘前观察</a>
+      <a href="#本周复盘">本周复盘</a>
+    </nav>
+  </header>
+  <main class="wrap">
+    
+    <section class="page-section" id="今日晨报">
+      <div class="section-title">
+        <h2>今日晨报</h2>
+        <p>过去观察窗口内评分最高的全球市场新闻。</p>
+      </div>
+      
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Hot jobs report puts Fed cuts further out of reach as Chair Warsh faces policy tests</h3>
+        <span class="score">Score 18.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>CNBC</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-05 22:09 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.cnbc.com/2026/06/05/hot-jobs-report-puts-fed-cuts-further-out-of-reach-as-chair-warsh-faces-policy-tests.html" target="_blank" rel="noopener noreferrer">https://www.cnbc.com/2026/06/05/hot-jobs-report-puts-fed-cuts-further-out-of-reach-as-chair-warsh-faces-policy-tests.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>New Fed Chair Kevin Warsh Faces Trump Demand That Could Impact Social Security</h3>
+        <span class="score">Score 12.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Yahoo Finance</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 16:20 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://finance.yahoo.com/economy/policy/articles/fed-chair-kevin-warsh-faces-132055843.html" target="_blank" rel="noopener noreferrer">https://finance.yahoo.com/economy/policy/articles/fed-chair-kevin-warsh-faces-132055843.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Oil tanker owners fear market crash after Iran war drove record profits</h3>
+        <span class="score">Score 11.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:28 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/786f23d9-876d-4c56-a9e8-67ac5b78cd49" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/786f23d9-876d-4c56-a9e8-67ac5b78cd49</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Trump relaunches tariffs war after court struck down levies</h3>
+        <span class="score">Score 11.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/7e5cfed4-dd91-435d-914a-677f97822724" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/7e5cfed4-dd91-435d-914a-677f97822724</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The key to the upcoming Fed meeting? How Warsh reacts to all the hints of a rate hike.</h3>
+        <span class="score">Score 10.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 14:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/the-key-to-the-upcoming-fed-meeting-how-warsh-reacts-to-all-the-hints-of-a-rate-hike-3cbdce15?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/the-key-to-the-upcoming-fed-meeting-how-warsh-reacts-to-all-the-hints-of-a-rate-hike-3cbdce15?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Nasdaq tumbles 4% as shares in chip and memory groups sink</h3>
+        <span class="score">Score 10.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-05 23:48 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/2929bbd3-1f71-4424-a577-f016c3c65603" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/2929bbd3-1f71-4424-a577-f016c3c65603</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The blowout jobs report is bad news for stocks — but it shouldn’t force the Fed’s hand on interest rates</h3>
+        <span class="score">Score 9.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 16:40 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/the-blowout-jobs-report-is-bad-news-for-stocks-but-it-shouldnt-force-the-feds-hand-on-interest-rates-66eaa2b9?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/the-blowout-jobs-report-is-bad-news-for-stocks-but-it-shouldnt-force-the-feds-hand-on-interest-rates-66eaa2b9?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>America’s crude inventories are getting perilously low. But that’s not the full story.</h3>
+        <span class="score">Score 8.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/americas-crude-inventories-are-getting-perilously-low-but-thats-not-the-full-story-c3104976?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/americas-crude-inventories-are-getting-perilously-low-but-thats-not-the-full-story-c3104976?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Allegations against Maine Senate candidate plunge Democrats into turmoil</h3>
+        <span class="score">Score 8.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 13:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/0b82963a-0225-484f-8b94-012c85c362d5" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/0b82963a-0225-484f-8b94-012c85c362d5</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The next NVIDIA? These 3 stocks below $50 are poised to win the next AI boom (and they’re still flying under the radar)</h3>
+        <span class="score">Score 7.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Yahoo Finance</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:05 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://finance.yahoo.com/markets/stocks/articles/next-nvidia-3-stocks-below-120500020.html" target="_blank" rel="noopener noreferrer">https://finance.yahoo.com/markets/stocks/articles/next-nvidia-3-stocks-below-120500020.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未进行 AI 总结，请查看原始链接。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>待观察。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>待观察。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+    </section>
+    
+    
+    <section class="page-section" id="美股盘前观察">
+      <div class="section-title">
+        <h2>美股盘前观察</h2>
+        <p>用于美股开盘前重点观察的宏观、行业和公司新闻。</p>
+      </div>
+      
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Hot jobs report puts Fed cuts further out of reach as Chair Warsh faces policy tests</h3>
+        <span class="score">Score 18.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>CNBC</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-05 22:09 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.cnbc.com/2026/06/05/hot-jobs-report-puts-fed-cuts-further-out-of-reach-as-chair-warsh-faces-policy-tests.html" target="_blank" rel="noopener noreferrer">https://www.cnbc.com/2026/06/05/hot-jobs-report-puts-fed-cuts-further-out-of-reach-as-chair-warsh-faces-policy-tests.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>New Fed Chair Kevin Warsh Faces Trump Demand That Could Impact Social Security</h3>
+        <span class="score">Score 12.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Yahoo Finance</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 16:20 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://finance.yahoo.com/economy/policy/articles/fed-chair-kevin-warsh-faces-132055843.html" target="_blank" rel="noopener noreferrer">https://finance.yahoo.com/economy/policy/articles/fed-chair-kevin-warsh-faces-132055843.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Oil tanker owners fear market crash after Iran war drove record profits</h3>
+        <span class="score">Score 11.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:28 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/786f23d9-876d-4c56-a9e8-67ac5b78cd49" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/786f23d9-876d-4c56-a9e8-67ac5b78cd49</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Trump relaunches tariffs war after court struck down levies</h3>
+        <span class="score">Score 11.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/7e5cfed4-dd91-435d-914a-677f97822724" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/7e5cfed4-dd91-435d-914a-677f97822724</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The key to the upcoming Fed meeting? How Warsh reacts to all the hints of a rate hike.</h3>
+        <span class="score">Score 10.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 14:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/the-key-to-the-upcoming-fed-meeting-how-warsh-reacts-to-all-the-hints-of-a-rate-hike-3cbdce15?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/the-key-to-the-upcoming-fed-meeting-how-warsh-reacts-to-all-the-hints-of-a-rate-hike-3cbdce15?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Nasdaq tumbles 4% as shares in chip and memory groups sink</h3>
+        <span class="score">Score 10.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-05 23:48 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/2929bbd3-1f71-4424-a577-f016c3c65603" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/2929bbd3-1f71-4424-a577-f016c3c65603</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The blowout jobs report is bad news for stocks — but it shouldn’t force the Fed’s hand on interest rates</h3>
+        <span class="score">Score 9.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 16:40 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/the-blowout-jobs-report-is-bad-news-for-stocks-but-it-shouldnt-force-the-feds-hand-on-interest-rates-66eaa2b9?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/the-blowout-jobs-report-is-bad-news-for-stocks-but-it-shouldnt-force-the-feds-hand-on-interest-rates-66eaa2b9?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>America’s crude inventories are getting perilously low. But that’s not the full story.</h3>
+        <span class="score">Score 8.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/americas-crude-inventories-are-getting-perilously-low-but-thats-not-the-full-story-c3104976?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/americas-crude-inventories-are-getting-perilously-low-but-thats-not-the-full-story-c3104976?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Allegations against Maine Senate candidate plunge Democrats into turmoil</h3>
+        <span class="score">Score 8.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 13:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/0b82963a-0225-484f-8b94-012c85c362d5" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/0b82963a-0225-484f-8b94-012c85c362d5</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The next NVIDIA? These 3 stocks below $50 are poised to win the next AI boom (and they’re still flying under the radar)</h3>
+        <span class="score">Score 7.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Yahoo Finance</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:05 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://finance.yahoo.com/markets/stocks/articles/next-nvidia-3-stocks-below-120500020.html" target="_blank" rel="noopener noreferrer">https://finance.yahoo.com/markets/stocks/articles/next-nvidia-3-stocks-below-120500020.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未进行 AI 总结，请查看原始链接。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>待观察。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>待观察。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+    </section>
+    
+    
+    <section class="page-section" id="本周复盘">
+      <div class="section-title">
+        <h2>本周复盘</h2>
+        <p>本周重要新闻、当时 AI 判断和后续行情表现。</p>
+      </div>
+      
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Hot jobs report puts Fed cuts further out of reach as Chair Warsh faces policy tests</h3>
+        <span class="score">Score 18.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>CNBC</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-05 22:09 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.cnbc.com/2026/06/05/hot-jobs-report-puts-fed-cuts-further-out-of-reach-as-chair-warsh-faces-policy-tests.html" target="_blank" rel="noopener noreferrer">https://www.cnbc.com/2026/06/05/hot-jobs-report-puts-fed-cuts-further-out-of-reach-as-chair-warsh-faces-policy-tests.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>New Fed Chair Kevin Warsh Faces Trump Demand That Could Impact Social Security</h3>
+        <span class="score">Score 12.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Yahoo Finance</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 16:20 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://finance.yahoo.com/economy/policy/articles/fed-chair-kevin-warsh-faces-132055843.html" target="_blank" rel="noopener noreferrer">https://finance.yahoo.com/economy/policy/articles/fed-chair-kevin-warsh-faces-132055843.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Oil tanker owners fear market crash after Iran war drove record profits</h3>
+        <span class="score">Score 11.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:28 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/786f23d9-876d-4c56-a9e8-67ac5b78cd49" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/786f23d9-876d-4c56-a9e8-67ac5b78cd49</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Trump relaunches tariffs war after court struck down levies</h3>
+        <span class="score">Score 11.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 15:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/7e5cfed4-dd91-435d-914a-677f97822724" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/7e5cfed4-dd91-435d-914a-677f97822724</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The key to the upcoming Fed meeting? How Warsh reacts to all the hints of a rate hike.</h3>
+        <span class="score">Score 10.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 14:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/the-key-to-the-upcoming-fed-meeting-how-warsh-reacts-to-all-the-hints-of-a-rate-hike-3cbdce15?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/the-key-to-the-upcoming-fed-meeting-how-warsh-reacts-to-all-the-hints-of-a-rate-hike-3cbdce15?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Nasdaq tumbles 4% as shares in chip and memory groups sink</h3>
+        <span class="score">Score 10.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Financial Times</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-05 23:48 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ft.com/content/2929bbd3-1f71-4424-a577-f016c3c65603" target="_blank" rel="noopener noreferrer">https://www.ft.com/content/2929bbd3-1f71-4424-a577-f016c3c65603</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>Fed Chair Warsh makes first hires at central bank, including &#x27;Project 2025&#x27; author</h3>
+        <span class="score">Score 10.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>CNBC</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-03 17:38 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.cnbc.com/2026/06/02/fed-chair-warsh-makes-first-hires-at-central-bank-including-project-2025-author.html" target="_blank" rel="noopener noreferrer">https://www.cnbc.com/2026/06/02/fed-chair-warsh-makes-first-hires-at-central-bank-including-project-2025-author.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未进行 AI 总结，请查看原始链接。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>待观察。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>待观察。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>How low can Bitcoin price go if $60K support fails?</h3>
+        <span class="score">Score 9.5</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>Cointelegraph</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-05 15:24 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://cointelegraph.com/markets/how-low-can-bitcoin-price-go-if-60k-support-fails?utm_source=rss_feed&amp;utm_medium=rss&amp;utm_campaign=rss_partner_inbound" target="_blank" rel="noopener noreferrer">https://cointelegraph.com/markets/how-low-can-bitcoin-price-go-if-60k-support-fails?utm_source=rss_feed&amp;utm_medium=rss&amp;utm_campaign=rss_partner_inbound</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未进行 AI 总结，请查看原始链接。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>待观察。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>待观察。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>The blowout jobs report is bad news for stocks — but it shouldn’t force the Fed’s hand on interest rates</h3>
+        <span class="score">Score 9.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>MarketWatch</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-06 16:40 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.marketwatch.com/story/the-blowout-jobs-report-is-bad-news-for-stocks-but-it-shouldnt-force-the-feds-hand-on-interest-rates-66eaa2b9?mod=mw_rss_topstories" target="_blank" rel="noopener noreferrer">https://www.marketwatch.com/story/the-blowout-jobs-report-is-bad-news-for-stocks-but-it-shouldnt-force-the-feds-hand-on-interest-rates-66eaa2b9?mod=mw_rss_topstories</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未调用 AI：缺少 OPENAI_API_KEY。新闻事实请以原始链接为准。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 影响分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>需要人工查看原文确认。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>缺少可靠分析输入或 API 配置，因此不列观察标的。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+
+    <article class="news-card">
+      <div class="card-head">
+        <h3>ECB Consumer Expectations Survey results – April 2026</h3>
+        <span class="score">Score 9.0</span>
+      </div>
+      <dl class="meta">
+        <div><dt>来源</dt><dd>European Central Bank</dd></div>
+        <div><dt>发布时间</dt><dd>2026-06-01 11:00 EEST</dd></div>
+        <div class="wide"><dt>原始链接</dt><dd><a href="https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr260601~bf8026bfc2.en.html" target="_blank" rel="noopener noreferrer">https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr260601~bf8026bfc2.en.html</a></dd></div>
+      </dl>
+
+      <div class="grid">
+        <section>
+          <h4>已确认事实</h4>
+          <ul><li>未进行 AI 总结，请查看原始链接。</li></ul>
+        </section>
+        <section>
+          <h4>AI 分析</h4>
+          <p>未进行 AI 分析。</p>
+        </section>
+      </div>
+
+      <section>
+        <h4>不确定部分</h4>
+        <ul><li>待观察。</li></ul>
+      </section>
+
+      <div class="chips">
+        <div><span>可能影响板块</span><b>不确定/待观察</b></div>
+        <div><span>影响方向</span><b>不确定</b></div>
+        <div><span>观察 ETF</span><b>不确定/待观察</b></div>
+        <div><span>观察个股</span><b>不确定/待观察</b></div>
+      </div>
+
+      <section>
+        <h4>为什么观察这些标的</h4>
+        <p>待观察。</p>
+      </section>
+
+      <section>
+        <h4>1天、5天、20天后涨跌追踪</h4>
+        <p class="muted">暂无行情追踪数据。行情只来自真实数据源，不由 AI 猜测。</p>
+      </section>
+    </article>
+    
+    </section>
+    
+  </main>
+  <footer>
+    <div class="wrap">
+      新闻事实来自 RSS/API 原始来源；AI 只做翻译、总结和影响分析。行情追踪来自真实行情数据源，不由 AI 猜测。禁止自动交易，禁止连接 IBKR 下单接口。
+    </div>
+  </footer>
 </body>
 </html>
-
