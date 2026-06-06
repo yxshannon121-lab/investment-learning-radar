@@ -45,16 +45,23 @@ def _bool_env(value: str | None, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _clean_env(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
 def load_settings(env_file: str | Path | None = None, **overrides: Any) -> Settings:
     load_dotenv(env_file or ROOT_DIR / ".env")
     data: dict[str, Any] = {
-        "openai_api_key": os.getenv("OPENAI_API_KEY"),
-        "openai_model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-        "resend_api_key": os.getenv("RESEND_API_KEY"),
+        "openai_api_key": _clean_env(os.getenv("OPENAI_API_KEY")),
+        "openai_model": _clean_env(os.getenv("OPENAI_MODEL")) or "gpt-4.1-mini",
+        "resend_api_key": _clean_env(os.getenv("RESEND_API_KEY")),
         "report_emails": _split_csv(os.getenv("REPORT_EMAILS")),
-        "sender_email": os.getenv("SENDER_EMAIL"),
-        "database_url": os.getenv("DATABASE_URL", f"sqlite:///{ROOT_DIR / 'data' / 'investment_radar.sqlite3'}"),
-        "timezone": os.getenv("TIMEZONE", "Europe/Helsinki"),
+        "sender_email": _clean_env(os.getenv("SENDER_EMAIL")),
+        "database_url": _clean_env(os.getenv("DATABASE_URL")) or f"sqlite:///{ROOT_DIR / 'data' / 'investment_radar.sqlite3'}",
+        "timezone": _clean_env(os.getenv("TIMEZONE")) or "Europe/Helsinki",
         "email_dry_run": _bool_env(os.getenv("EMAIL_DRY_RUN"), True),
         "max_report_items": int(os.getenv("MAX_REPORT_ITEMS", "10")),
         "min_ai_score": float(os.getenv("MIN_AI_SCORE", "8")),
@@ -63,4 +70,3 @@ def load_settings(env_file: str | Path | None = None, **overrides: Any) -> Setti
     }
     data.update(overrides)
     return Settings(**data)
-
