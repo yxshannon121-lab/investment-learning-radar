@@ -53,6 +53,15 @@ jobs:
             echo "args=--only-if-local-time 09:00 --only-weekday Sunday" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Check OpenAI key availability
+        shell: bash
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is not available in this job."
+          else
+            echo "OPENAI_API_KEY is available to the Python step."
+          fi
+
       - name: Update static dashboard
         run: python main.py ${{ steps.select.outputs.cmd }} ${{ steps.select.outputs.args }}
 
