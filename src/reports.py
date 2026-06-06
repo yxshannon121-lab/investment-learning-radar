@@ -147,9 +147,6 @@ AI 分析：
 
 
 def analyze_due_news(settings: Settings, db: Database) -> int:
-    if not settings.openai_api_key:
-        return 0
-
     analysis_lookback_hours = max(settings.report_lookback_hours, 24 * 7)
     analysis_limit = max(settings.max_report_items, 20)
     rows = db.high_score_unanalyzed(
@@ -275,4 +272,3 @@ def run_report(report_type: str, settings: Settings, db: Database) -> dict[str, 
         "database": str(settings.sqlite_path),
         "outputs": str(ROOT_DIR / "outputs"),
     }
-

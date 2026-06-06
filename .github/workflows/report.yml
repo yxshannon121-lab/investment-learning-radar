@@ -1,4 +1,4 @@
-name: Investment Learning Radar Dashboard
+name: 中文投资学习雷达
 
 on:
   workflow_dispatch:
@@ -21,7 +21,6 @@ jobs:
     permissions:
       contents: write
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       DATABASE_URL: sqlite:///data/investment_radar.sqlite3
       TIMEZONE: Europe/Helsinki
       EMAIL_DRY_RUN: "true"
@@ -51,15 +50,6 @@ jobs:
           else
             echo "cmd=weekly" >> "$GITHUB_OUTPUT"
             echo "args=--only-if-local-time 09:00 --only-weekday Sunday" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check OpenAI key availability
-        shell: bash
-        run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OPENAI_API_KEY is not available in this job."
-          else
-            echo "OPENAI_API_KEY is available to the Python step."
           fi
 
       - name: Update static dashboard

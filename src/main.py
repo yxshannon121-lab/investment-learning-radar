@@ -57,8 +57,9 @@ def main() -> None:
 
     if args.command == "fetch":
         fetch_result = fetch_and_store(settings, db)
+        analyzed = analyze_due_news(settings, db)
         dashboard_path = write_dashboard(settings, db)
-        result = {"fetch": fetch_result, "dashboard": str(dashboard_path)}
+        result = {"fetch": fetch_result, "analyzed": analyzed, "dashboard": str(dashboard_path)}
     elif args.command == "track":
         tracked = update_due_snapshots(db)
         dashboard_path = write_dashboard(settings, db)

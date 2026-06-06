@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, HttpUrl
 
 
-ImpactDirection = Literal["利好", "利空", "不确定"]
+ImpactDirection = Literal["利好", "利空", "中性", "不确定"]
 
 
 class NewsItem(BaseModel):
@@ -25,6 +25,8 @@ class ScoredNews(BaseModel):
 
 
 class AIAnalysis(BaseModel):
+    title_zh: str = ""
+    summary_zh: list[str] = Field(default_factory=list)
     confirmed_facts_zh: list[str] = Field(default_factory=list)
     ai_analysis_zh: str = ""
     affected_sectors: list[str] = Field(default_factory=list)
@@ -33,5 +35,5 @@ class AIAnalysis(BaseModel):
     observed_stocks: list[str] = Field(default_factory=list)
     observation_reason_zh: str = ""
     uncertainties_zh: list[str] = Field(default_factory=list)
+    analysis_method: str = "规则分析"
     risk_note_zh: str = "这不是投资建议，只是学习和观察。"
-

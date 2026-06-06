@@ -75,6 +75,9 @@ class Database:
                     raw_content TEXT DEFAULT '',
                     score REAL DEFAULT 0,
                     score_reasons TEXT DEFAULT '[]',
+                    title_zh TEXT,
+                    summary_zh TEXT DEFAULT '[]',
+                    analysis_method TEXT DEFAULT '规则分析',
                     ai_summary TEXT,
                     confirmed_facts TEXT,
                     ai_analysis TEXT,
@@ -120,6 +123,18 @@ class Database:
                 );
                 """
             )
+            self._ensure_columns(conn)
+
+    def _ensure_columns(self, conn: sqlite3.Connection) -> None:
+        existing = {row["name"] for row in conn.execute("PRAGMA table_info(news)").fetchall()}
+        columns = {
+            "title_zh": "TEXT",
+            "summary_zh": "TEXT DEFAULT '[]'",
+            "analysis_method": "TEXT DEFAULT '规则分析'",
+        }
+        for name, definition in columns.items():
+            if name not in existing:
+                conn.execute(f"ALTER TABLE news ADD COLUMN {name} {definition}")
 
     def recent_titles(self, hours: int = 72) -> list[str]:
         threshold = dt_to_db(utc_now() - timedelta(hours=hours))
@@ -164,6 +179,9 @@ class Database:
                 """
                 UPDATE news
                 SET ai_summary = ?,
+                    title_zh = ?,
+                    summary_zh = ?,
+                    analysis_method = ?,
                     confirmed_facts = ?,
                     ai_analysis = ?,
                     affected_sectors = ?,
@@ -177,6 +195,9 @@ class Database:
                 """,
                 (
                     "\n".join(analysis.confirmed_facts_zh),
+                    analysis.title_zh,
+                    json_dumps(analysis.summary_zh),
+                    analysis.analysis_method,
                     json_dumps(analysis.confirmed_facts_zh),
                     analysis.ai_analysis_zh,
                     json_dumps(analysis.affected_sectors),
@@ -215,6 +236,10 @@ class Database:
             analyzed_filter = """
                   AND (
                     analyzed_at IS NULL
+                    OR title_zh IS NULL
+                    OR title_zh = ''
+                    OR summary_zh IS NULL
+                    OR summary_zh = '[]'
                     OR confirmed_facts LIKE '%缺少 OPENAI_API_KEY%'
                     OR ai_summary LIKE '%缺少 OPENAI_API_KEY%'
                   )

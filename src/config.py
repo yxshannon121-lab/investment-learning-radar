@@ -14,6 +14,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 class Settings(BaseModel):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"
+    enable_openai_analysis: bool = False
     resend_api_key: str | None = None
     report_emails: list[str] = Field(default_factory=list)
     sender_email: str | None = None
@@ -57,6 +58,7 @@ def load_settings(env_file: str | Path | None = None, **overrides: Any) -> Setti
     data: dict[str, Any] = {
         "openai_api_key": _clean_env(os.getenv("OPENAI_API_KEY")),
         "openai_model": _clean_env(os.getenv("OPENAI_MODEL")) or "gpt-4.1-mini",
+        "enable_openai_analysis": _bool_env(os.getenv("ENABLE_OPENAI_ANALYSIS"), False),
         "resend_api_key": _clean_env(os.getenv("RESEND_API_KEY")),
         "report_emails": _split_csv(os.getenv("REPORT_EMAILS")),
         "sender_email": _clean_env(os.getenv("SENDER_EMAIL")),
