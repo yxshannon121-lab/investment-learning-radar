@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .translation_utils import clean_text, split_paragraphs
+from .translation_utils import clean_text, is_paywall_text, split_paragraphs
 
 
 USER_AGENT = "investment-learning-radar/0.2 (+learning project)"
@@ -9,18 +9,20 @@ USER_AGENT = "investment-learning-radar/0.2 (+learning project)"
 def best_available_text(row, timeout: int = 15) -> tuple[str, str]:
     raw_content = clean_text(row["raw_content"] or "")
     raw_summary = clean_text(row["raw_summary"] or "")
-    if len(raw_content) >= 400:
+    if len(raw_content) >= 400 and not is_paywall_text(raw_content):
         return raw_content, "rss_content"
-    if raw_summary and len(raw_summary) >= 120:
-        return raw_summary, "rss_summary"
 
     extracted = extract_from_url(row["url"], timeout=timeout)
-    if extracted:
+    if extracted and not is_paywall_text(extracted):
         return extracted, "article_page"
-    if raw_content:
-        return raw_content, "rss_content"
-    if raw_summary:
+    if raw_summary and not is_paywall_text(raw_summary):
         return raw_summary, "rss_summary"
+    if raw_content and not is_paywall_text(raw_content):
+        return raw_content, "rss_content"
+    if raw_summary and not is_paywall_text(raw_summary):
+        return raw_summary, "rss_summary"
+    if extracted and is_paywall_text(extracted):
+        return "", "paywall"
     return "", "none"
 
 
@@ -31,7 +33,8 @@ def extract_from_url(url: str, timeout: int = 15) -> str:
         if downloaded:
             extracted = _trafilatura_extract(downloaded)
             if extracted and len(extracted) >= 200:
-                return extracted
+                if not is_paywall_text(extracted):
+                    return extracted
     except Exception:
         pass
 
@@ -47,10 +50,12 @@ def extract_from_url(url: str, timeout: int = 15) -> str:
     try:
         extracted = _trafilatura_extract(html)
         if extracted and len(extracted) >= 200:
-            return extracted
+            if not is_paywall_text(extracted):
+                return extracted
     except Exception:
         pass
-    return _simple_html_extract(html)
+    extracted = _simple_html_extract(html)
+    return "" if is_paywall_text(extracted) else extracted
 
 
 def _trafilatura_fetch(url: str) -> str:

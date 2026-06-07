@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from .article_extractor import best_available_text
 from .models import AIAnalysis
-from .translation_utils import TRANSLATION_FALLBACK, split_paragraphs, translate_paragraphs, translate_title
+from .translation_utils import TRANSLATION_FALLBACK, clean_text, split_paragraphs, translate_paragraphs, translate_title
 
 
 RISK_NOTE = "本页面仅用于投资学习和信息整理，不构成任何投资建议。市场有风险，投资需谨慎。"
@@ -58,6 +58,7 @@ RULES = [
             "cloud",
             "inference",
             "training",
+            "liquid cooling",
         ),
         sectors=("AI", "半导体", "云计算", "数据中心"),
         etfs=("SOXX", "SMH", "QQQ", "IGV"),
@@ -125,7 +126,15 @@ RULES = [
     ),
     Rule(
         name_zh="电力与能源基础设施",
-        keywords=("nuclear", "smr", "power grid", "electricity demand", "utility", "data center power"),
+        keywords=(
+            "nuclear",
+            "smr",
+            "power grid",
+            "electricity demand",
+            "utility",
+            "data center power",
+            "energy infrastructure",
+        ),
         sectors=("核电", "电网", "能源基础设施", "数据中心供电"),
         etfs=("XLU", "XLE"),
         stocks=("CEG", "VST", "NEE", "OKLO", "SMR", "XOM", "CVX"),
@@ -185,32 +194,21 @@ def _title_zh(row, rules: list[Rule]) -> str:
 
 
 def _summary_zh(row, rules: list[Rule]) -> list[str]:
-    source = row["source"]
-    published = row["published_at"]
-    if rules:
-        topics = "、".join(rule.name_zh for rule in rules)
-        summary = [
-            f"这条新闻来自{source}，系统从原始标题或RSS摘要中识别到主题：{topics}。",
-            "页面不展示英文原文标题和英文摘要；如需核对细节，请点击原文链接查看来源页面。",
-        ]
-    else:
-        summary = [
-            f"这条新闻来自{source}，发布时间记录为{published}。",
-            "系统没有在标题或RSS摘要中识别到核心规则关键词，因此仅作为一般财经新闻保留观察。",
-        ]
-    if row["raw_summary"]:
-        summary.append("RSS源提供了摘要文本；系统只做中文整理，不添加原文没有的事实。")
-    else:
-        summary.append("RSS源未提供可用摘要；系统不编造新闻细节。")
-    return summary[:5]
+    title = translate_title(row["title"])
+    if title:
+        return [title]
+    return ["该来源未提供可翻译摘要，请点击原文链接查看。"]
 
 
 def _translated_summary(row, rules: list[Rule]) -> list[str]:
-    source_text = row["raw_summary"] or row["title"] or ""
+    source_text = clean_text(row["raw_summary"] or row["raw_content"] or "")
     translated = translate_paragraphs(split_paragraphs(source_text, max_paragraphs=3), max_chars=1600)
     if translated:
         return translated[:3]
-    return _summary_zh(row, rules)[:3]
+    if source_text:
+        return [TRANSLATION_FALLBACK]
+    title_summary = _summary_zh(row, rules)
+    return title_summary[:1]
 
 
 def _translated_content(row, fetch_article: bool) -> tuple[list[str], str]:
@@ -219,7 +217,7 @@ def _translated_content(row, fetch_article: bool) -> tuple[list[str], str]:
     source_text, source = best_available_text(row)
     paragraphs = split_paragraphs(source_text, max_paragraphs=80)
     if not paragraphs:
-        return [], "unavailable"
+        return [], source
     translated = translate_paragraphs(paragraphs)
     if translated:
         return translated, source

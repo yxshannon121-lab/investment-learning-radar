@@ -246,8 +246,10 @@ class Database:
                     analyzed_at IS NULL
                     OR title_zh IS NULL
                     OR title_zh = ''
+                    OR title_zh LIKE '%相关重要新闻%'
                     OR summary_zh IS NULL
                     OR summary_zh = '[]'
+                    OR summary_zh LIKE '%系统从原始标题%'
                     OR content_zh IS NULL
                     OR content_zh = '[]'
                     OR confirmed_facts LIKE '%缺少 OPENAI_API_KEY%'

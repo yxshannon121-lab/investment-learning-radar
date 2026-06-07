@@ -41,6 +41,30 @@ SECTOR_TO_CATEGORY = {
     "数据中心供电": "能源",
 }
 
+SOURCE_RATING = {
+    "Federal Reserve": 5,
+    "European Central Bank": 5,
+    "SEC": 5,
+    "US Treasury": 5,
+    "IMF": 5,
+    "World Bank": 5,
+    "Eurostat": 5,
+    "European Commission": 5,
+    "Reuters": 5,
+    "Associated Press": 5,
+    "CNBC": 4,
+    "CNBC Markets": 4,
+    "CNBC Economy": 4,
+    "Financial Times": 4,
+    "Financial Times Europe": 4,
+    "Yahoo Finance": 4,
+    "MarketWatch": 4,
+    "SpaceNews": 4,
+    "NASA": 5,
+    "ESA": 5,
+    "US Space Force": 5,
+}
+
 
 def _local_time(value: str | None, settings: Settings, include_tz: bool = True) -> str:
     parsed = dt_from_db(value)
@@ -101,6 +125,11 @@ def _importance_class(label: str) -> str:
     return {"高": "high", "中": "medium", "低": "low"}.get(label, "low")
 
 
+def _source_rating(source: str) -> str:
+    stars = SOURCE_RATING.get(source, 3)
+    return "★" * stars + "☆" * (5 - stars)
+
+
 def _short_summary(summary: list[str], limit: int = 2) -> list[str]:
     clean = [item.strip() for item in summary if item and item.strip()]
     return clean[:limit] or ["暂无可展示的中文摘要，请点击原文链接核对新闻。"]
@@ -142,27 +171,33 @@ def _category_for_sectors(sectors: list[str]) -> str:
     return "综合市场"
 
 
-def _overview(rows) -> tuple[Counter, list[str], list[str]]:
-    categories: Counter = Counter()
+def _importance_weight(row) -> int:
+    label = _importance(row["score"])
+    return {"高": 3, "中": 2, "低": 1}.get(label, 1)
+
+
+def _overview(rows) -> tuple[list[str], list[str]]:
     etfs: Counter = Counter()
     stocks: Counter = Counter()
     for row in rows:
         display = _analysis_for_display(row)
-        sectors = list(display["sectors"])
-        categories[_category_for_sectors(sectors)] += 1
-        etfs.update(display["etfs"])
-        stocks.update(display["stocks"])
+        weight = _importance_weight(row)
+        for symbol in display["etfs"]:
+            etfs[str(symbol)] += weight
+        for symbol in display["stocks"]:
+            stocks[str(symbol)] += weight
     top_etfs = [symbol for symbol, _ in etfs.most_common(8)]
-    top_stocks = [symbol for symbol, _ in stocks.most_common(8)]
-    return categories, top_etfs, top_stocks
+    top_stocks = [symbol for symbol, _ in stocks.most_common(12)]
+    return top_etfs, top_stocks
 
 
 def _track_counts(rows) -> Counter:
     counts: Counter = Counter()
     for row in rows:
         display = _analysis_for_display(row)
+        weight = _importance_weight(row)
         for sector in display["sectors"]:
-            counts[str(sector)] += 1
+            counts[str(sector)] += weight
     return counts
 
 
@@ -199,7 +234,7 @@ def _homepage_news_item(row, settings: Settings) -> str:
         <h3><a href="{html.escape(_news_href(row, settings))}">{html.escape(str(display['title_zh']))}</a></h3>
         <div class="meta-line">
           <span class="importance {html.escape(_importance_class(importance))}">重要性：{html.escape(importance)}</span>
-          <span>来源：{html.escape(row['source'])}</span>
+          <span>来源：{html.escape(row['source'])} {html.escape(_source_rating(row['source']))}</span>
           <span>发布时间：{html.escape(_local_time(row['published_at'], settings, include_tz=False))}</span>
         </div>
         <p class="summary-text">{summary}</p>
@@ -246,10 +281,17 @@ def _translation_block(row, display: dict[str, object]) -> str:
         </section>
         """
 
+    status = str(display.get("content_status") or "unavailable")
+    if status == "paywall":
+        message = "该来源正文受付费墙或登录限制，暂时无法获取全文，请点击原文查看。"
+    elif status in {"none", "unavailable"}:
+        message = "该来源未提供可翻译摘要，请点击原文链接查看。"
+    else:
+        message = "暂时无法生成中文翻译，请点击原文查看"
     return f"""
     <section class="panel">
       <h2>中文全文翻译</h2>
-      <p>暂时无法生成中文翻译，请点击原文查看</p>
+      <p>{html.escape(message)}</p>
       <h3>中文摘要</h3>
       <ul>{summary_items}</ul>
     </section>
@@ -274,7 +316,7 @@ def _detail_page(row, db: Database, settings: Settings) -> str:
     <div class="wrap hero compact">
       <a class="back-link" href="../index.html">← 返回首页</a>
       <h1>{title}</h1>
-      <p class="subhead">来源：{html.escape(row['source'])} ｜ 发布时间：{html.escape(_local_time(row['published_at'], settings))}</p>
+      <p class="subhead">来源：{html.escape(row['source'])} {html.escape(_source_rating(row['source']))} ｜ 发布时间：{html.escape(_local_time(row['published_at'], settings))}</p>
       <p><a class="source-link" href="{html.escape(row['url'])}" target="_blank" rel="noopener noreferrer">打开原文链接</a></p>
     </div>
   </header>
@@ -391,15 +433,14 @@ def build_dashboard_html(settings: Settings, db: Database) -> str:
     now = datetime.now(ZoneInfo(settings.timezone))
     generated_at = now.strftime("%Y-%m-%d %H:%M %Z")
     rows = db.top_news_for_report(settings.report_lookback_hours, max(settings.max_report_items, 24))
-    categories, top_etfs, top_stocks = _overview(rows)
+    top_etfs, top_stocks = _overview(rows)
     tracks = _track_counts(rows)
     top_rows = rows[:3]
     rest_rows = rows[3:]
 
     category_cards = "".join(
-        f'<div class="count-card"><span>{html.escape(category)}</span><b>{categories.get(category, 0)}</b></div>'
-        for category in CATEGORY_ORDER
-        if categories.get(category, 0) > 0
+        f'<div class="count-card"><span>{html.escape(name)}</span><b>{count}</b></div>'
+        for name, count in tracks.most_common(16)
     )
     if not category_cards:
         category_cards = '<p class="empty">当前窗口内暂无可统计新闻。</p>'
@@ -435,8 +476,8 @@ def build_dashboard_html(settings: Settings, db: Database) -> str:
       <div class="overview-card">
         <h2>今日重点观察</h2>
         <div class="watch-list">
-          <div><h3>ETF/资产</h3>{_badge_list(top_etfs or ['SPY', 'QQQ', 'SOXX', 'XLE', 'TLT'])}</div>
-          <div><h3>个股</h3>{_badge_list(top_stocks or ['NVDA', 'AMD', 'TSM', 'AAPL', 'MSFT'])}</div>
+          <div><h3>ETF/资产</h3>{_badge_list(top_etfs)}</div>
+          <div><h3>个股</h3>{_badge_list(top_stocks)}</div>
         </div>
       </div>
     </section>
