@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import html
+import re
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -11,17 +13,58 @@ from .rule_analyze import RISK_NOTE, analyze_news_row_rules
 
 
 DISCLAIMER = RISK_NOTE
+NEWS_DIR = "news"
+
+CATEGORY_ORDER = ["宏观经济", "科技/AI", "半导体", "能源", "加密货币", "地缘政治", "欧洲市场", "综合市场"]
+SECTOR_TO_CATEGORY = {
+    "科技": "科技/AI",
+    "AI": "科技/AI",
+    "半导体": "半导体",
+    "能源": "能源",
+    "加密货币": "加密货币",
+    "军工": "地缘政治",
+    "黄金": "地缘政治",
+    "工业": "地缘政治",
+    "出口": "地缘政治",
+    "欧洲银行": "欧洲市场",
+    "欧洲市场": "欧洲市场",
+    "银行": "宏观经济",
+    "债券": "宏观经济",
+}
 
 
-def _local_time(value: str | None, settings: Settings) -> str:
+def _local_time(value: str | None, settings: Settings, include_tz: bool = True) -> str:
     parsed = dt_from_db(value)
     if not parsed:
         return value or "未知"
-    return parsed.astimezone(ZoneInfo(settings.timezone)).strftime("%Y-%m-%d %H:%M %Z")
+    fmt = "%Y-%m-%d %H:%M %Z" if include_tz else "%Y-%m-%d %H:%M"
+    return parsed.astimezone(ZoneInfo(settings.timezone)).strftime(fmt)
+
+
+def _date_slug(value: str | None, settings: Settings) -> str:
+    parsed = dt_from_db(value)
+    if not parsed:
+        return "unknown"
+    return parsed.astimezone(ZoneInfo(settings.timezone)).strftime("%Y%m%d")
+
+
+def _news_filename(row, settings: Settings) -> str:
+    return f"news_{_date_slug(row['published_at'], settings)}_{int(row['id']):03d}.html"
+
+
+def _news_href(row, settings: Settings, from_detail: bool = False) -> str:
+    prefix = "" if from_detail else f"{NEWS_DIR}/"
+    return f"{prefix}{_news_filename(row, settings)}"
 
 
 def _list_text(values: list[str]) -> str:
     return "、".join(values) if values else "不确定/待观察"
+
+
+def _badge_list(values: list[str]) -> str:
+    if not values:
+        return '<span class="muted">不确定/待观察</span>'
+    return "".join(f'<span class="badge">{html.escape(value)}</span>' for value in values)
 
 
 def _pct(value) -> str:
@@ -34,6 +77,24 @@ def _price(value) -> str:
     if value is None:
         return "待获取"
     return f"{float(value):.2f}"
+
+
+def _importance(score: float | None) -> str:
+    score = float(score or 0)
+    if score >= 12:
+        return "高"
+    if score >= 8:
+        return "中"
+    return "低"
+
+
+def _importance_class(label: str) -> str:
+    return {"高": "high", "中": "medium", "低": "low"}.get(label, "low")
+
+
+def _short_summary(summary: list[str], limit: int = 2) -> list[str]:
+    clean = [item.strip() for item in summary if item and item.strip()]
+    return clean[:limit] or ["暂无可展示的中文摘要，请点击原文链接核对新闻。"]
 
 
 def _analysis_for_display(row) -> dict[str, object]:
@@ -57,7 +118,31 @@ def _analysis_for_display(row) -> dict[str, object]:
         "direction": row["impact_direction"] or rule_fallback.impact_direction,
         "reason": row["observation_reason"] or rule_fallback.observation_reason_zh,
         "method": row["analysis_method"] or rule_fallback.analysis_method,
+        "importance": _importance(row["score"]),
     }
+
+
+def _category_for_sectors(sectors: list[str]) -> str:
+    for sector in sectors:
+        category = SECTOR_TO_CATEGORY.get(sector)
+        if category:
+            return category
+    return "综合市场"
+
+
+def _overview(rows) -> tuple[Counter, list[str], list[str]]:
+    categories: Counter = Counter()
+    etfs: Counter = Counter()
+    stocks: Counter = Counter()
+    for row in rows:
+        display = _analysis_for_display(row)
+        sectors = list(display["sectors"])
+        categories[_category_for_sectors(sectors)] += 1
+        etfs.update(display["etfs"])
+        stocks.update(display["stocks"])
+    top_etfs = [symbol for symbol, _ in etfs.most_common(8)]
+    top_stocks = [symbol for symbol, _ in stocks.most_common(8)]
+    return categories, top_etfs, top_stocks
 
 
 def _market_table(db: Database, news_id: int) -> str:
@@ -83,122 +168,125 @@ def _market_table(db: Database, news_id: int) -> str:
     )
 
 
-def _news_card(row, db: Database, settings: Settings) -> str:
+def _homepage_news_item(row, settings: Settings) -> str:
     display = _analysis_for_display(row)
-    summary_items = "".join(f"<li>{html.escape(item)}</li>" for item in display["summary_zh"])
-    uncertainty_items = "".join(f"<li>{html.escape(item)}</li>" for item in display["uncertainties"]) or "<li>待观察。</li>"
-
+    importance = str(display["importance"])
+    summary = " ".join(html.escape(item) for item in _short_summary(display["summary_zh"], 2))
     return f"""
-    <article class="news-card">
-      <div class="card-head">
-        <h3>{html.escape(str(display['title_zh']))}</h3>
-        <span class="score">重要性 {float(row['score'] or 0):.1f}</span>
+    <article class="news-row">
+      <div class="news-row-main">
+        <h3><a href="{html.escape(_news_href(row, settings))}">{html.escape(str(display['title_zh']))}</a></h3>
+        <div class="meta-line">
+          <span class="importance {html.escape(_importance_class(importance))}">重要性：{html.escape(importance)}</span>
+          <span>来源：{html.escape(row['source'])}</span>
+          <span>发布时间：{html.escape(_local_time(row['published_at'], settings, include_tz=False))}</span>
+        </div>
+        <p class="summary-text">{summary}</p>
+        <div class="compact-grid">
+          <div><b>可能影响板块</b>{_badge_list(display['sectors'])}</div>
+          <div><b>观察 ETF</b>{_badge_list(display['etfs'])}</div>
+          <div><b>观察个股</b>{_badge_list(display['stocks'])}</div>
+        </div>
       </div>
-      <dl class="meta">
-        <div><dt>来源</dt><dd>{html.escape(row['source'])}</dd></div>
-        <div><dt>发布时间</dt><dd>{html.escape(_local_time(row['published_at'], settings))}</dd></div>
-        <div class="wide"><dt>原文链接</dt><dd><a href="{html.escape(row['url'])}" target="_blank" rel="noopener noreferrer">打开原文</a></dd></div>
-      </dl>
-
-      <section class="summary">
-        <h4>新闻摘要（中文）</h4>
-        <ul>{summary_items}</ul>
-      </section>
-
-      <div class="chips">
-        <div><span>可能影响板块</span><b>{html.escape(_list_text(display['sectors']))}</b></div>
-        <div><span>影响方向</span><b>{html.escape(str(display['direction']))}</b></div>
-        <div><span>观察 ETF/资产</span><b>{html.escape(_list_text(display['etfs']))}</b></div>
-        <div><span>观察个股</span><b>{html.escape(_list_text(display['stocks']))}</b></div>
-      </div>
-
-      <section>
-        <h4>规则分析</h4>
-        <p>{html.escape(str(display['analysis']))}</p>
-      </section>
-
-      <section>
-        <h4>观察原因</h4>
-        <p>{html.escape(str(display['reason']))}</p>
-      </section>
-
-      <section>
-        <h4>不确定部分</h4>
-        <ul>{uncertainty_items}</ul>
-      </section>
-
-      <section>
-        <h4>1天、5天、20天后涨跌追踪</h4>
-        {_market_table(db, row['id'])}
-      </section>
+      <a class="detail-link" href="{html.escape(_news_href(row, settings))}">查看全文 →</a>
     </article>
     """
 
 
-def _section(title: str, description: str, rows, db: Database, settings: Settings) -> str:
-    if not rows:
-        content = '<p class="empty">当前窗口内没有来自可靠 RSS/API 来源的新闻记录。系统不会编造新闻。</p>'
-    else:
-        content = "\n".join(_news_card(row, db, settings) for row in rows)
+def _homepage_section(title: str, rows, settings: Settings, empty_text: str, section_id: str) -> str:
+    content = "\n".join(_homepage_news_item(row, settings) for row in rows) if rows else f'<p class="empty">{html.escape(empty_text)}</p>'
     return f"""
-    <section class="page-section" id="{html.escape(title)}">
+    <section class="page-section" id="{html.escape(section_id)}">
       <div class="section-title">
         <h2>{html.escape(title)}</h2>
-        <p>{html.escape(description)}</p>
       </div>
       {content}
     </section>
     """
 
 
-def _weekly_review(rows, db: Database, settings: Settings) -> str:
-    if not rows:
-        return '<p class="empty">本周暂无可复盘的可靠新闻记录。</p>'
-    items = []
-    for row in rows:
-        display = _analysis_for_display(row)
-        snapshots = db.market_snapshots_for_news(row["id"])
-        moves = [
-            snap
-            for snap in snapshots
-            if snap["pct_1d"] is not None or snap["pct_5d"] is not None or snap["pct_20d"] is not None
-        ]
-        if not moves:
-            review = "后续涨跌数据仍不足，暂不能判断影响是否明显。"
-        else:
-            visible = any(abs(float(snap["pct_1d"] or snap["pct_5d"] or snap["pct_20d"] or 0)) >= 2 for snap in moves)
-            review = "已有较明显价格反应，适合复盘新闻与市场表现的关系。" if visible else "价格反应暂不明显，可能属于噪音或已被市场提前消化。"
-        items.append(
-            f"""
-            <article class="review-item">
-              <h3>{html.escape(str(display['title_zh']))}</h3>
-              <p><b>当时分析：</b>{html.escape(str(display['direction']))}；{html.escape(str(display['reason']))}</p>
-              <p><b>对应 ETF/资产：</b>{html.escape(_list_text(display['etfs']))}</p>
-              <p><b>对应个股：</b>{html.escape(_list_text(display['stocks']))}</p>
-              {_market_table(db, row['id'])}
-              <p><b>复盘结论：</b>{html.escape(review)}</p>
-            </article>
-            """
-        )
-    return "".join(items)
+def _translation_block(row, display: dict[str, object]) -> str:
+    summary_items = "".join(f"<li>{html.escape(item)}</li>" for item in display["summary_zh"])
+    has_ai_translation = display["method"] == "AI增强分析" and display["summary_zh"]
+    if has_ai_translation:
+        return f"""
+        <section class="panel">
+          <h2>中文全文翻译</h2>
+          <p class="muted">以下中文内容来自可选增强分析，仅基于 RSS/API 提供的原始字段生成。</p>
+          <ul>{summary_items}</ul>
+        </section>
+        """
+
+    source_has_text = bool((row["raw_content"] or "").strip() or (row["raw_summary"] or "").strip())
+    message = "免费规则模式暂时无法生成完整中文翻译。"
+    if source_has_text:
+        message += "系统已保留原文链接，并在下方提供基于 RSS/API 字段的中文摘要。"
+    else:
+        message += "该 RSS/API 来源未提供可翻译的摘要或正文。"
+    return f"""
+    <section class="panel">
+      <h2>中文全文翻译</h2>
+      <p>{html.escape(message)}</p>
+      <h3>中文摘要</h3>
+      <ul>{summary_items}</ul>
+    </section>
+    """
 
 
-def build_dashboard_html(settings: Settings, db: Database) -> str:
-    now = datetime.now(ZoneInfo(settings.timezone))
-    generated_at = now.strftime("%Y-%m-%d %H:%M %Z")
-    daily_limit = settings.max_report_items
-    morning_rows = db.top_news_for_report(settings.report_lookback_hours, daily_limit)
-    premarket_rows = db.top_news_for_report(settings.report_lookback_hours, daily_limit)
-    weekly_rows = db.weekly_news(limit=10)
-
+def _detail_page(row, db: Database, settings: Settings) -> str:
+    display = _analysis_for_display(row)
+    importance = str(display["importance"])
+    uncertainty_items = "".join(f"<li>{html.escape(item)}</li>" for item in display["uncertainties"]) or "<li>待观察。</li>"
+    title = html.escape(str(display["title_zh"]))
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>中文投资学习雷达（免费版）</title>
-  <style>
-    :root {{
+  <title>{title} - 中文投资学习雷达</title>
+  <style>{_styles()}</style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap hero compact">
+      <a class="back-link" href="../index.html">← 返回首页</a>
+      <h1>{title}</h1>
+      <p class="subhead">来源：{html.escape(row['source'])} ｜ 发布时间：{html.escape(_local_time(row['published_at'], settings))}</p>
+      <p><a class="source-link" href="{html.escape(row['url'])}" target="_blank" rel="noopener noreferrer">打开原文链接</a></p>
+    </div>
+  </header>
+  <main class="wrap">
+    {_translation_block(row, display)}
+    <section class="panel">
+      <h2>规则分析</h2>
+      <div class="detail-grid">
+        <div><b>重要性</b><span class="importance {html.escape(_importance_class(importance))}">{html.escape(importance)}</span></div>
+        <div><b>可能影响板块</b>{_badge_list(display['sectors'])}</div>
+        <div><b>影响方向</b><span>{html.escape(str(display['direction']))}</span></div>
+        <div><b>观察 ETF/资产</b>{_badge_list(display['etfs'])}</div>
+        <div><b>观察个股</b>{_badge_list(display['stocks'])}</div>
+      </div>
+      <h3>为什么观察</h3>
+      <p>{html.escape(str(display['reason']))}</p>
+      <h3>不确定部分</h3>
+      <ul>{uncertainty_items}</ul>
+    </section>
+    <details class="panel">
+      <summary>查看后续涨跌追踪</summary>
+      {_market_table(db, row['id'])}
+    </details>
+  </main>
+  <footer>
+    <div class="wrap">{DISCLAIMER}</div>
+  </footer>
+</body>
+</html>
+"""
+
+
+def _styles() -> str:
+    return """
+    :root {
       color-scheme: light;
       --bg: #f5f7fa;
       --panel: #ffffff;
@@ -209,228 +297,153 @@ def build_dashboard_html(settings: Settings, db: Database) -> str:
       --accent-soft: #e7f5f3;
       --warn: #8a4b00;
       --warn-soft: #fff4df;
-    }}
-    * {{ box-sizing: border-box; }}
-    body {{
+      --high: #b91c1c;
+      --medium: #9a5b00;
+      --low: #475569;
+    }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
-    }}
-    header {{
-      background: #ffffff;
-      border-bottom: 1px solid var(--line);
-    }}
-    .wrap {{
-      width: min(1160px, calc(100% - 32px));
-      margin: 0 auto;
-    }}
-    .hero {{ padding: 28px 0 20px; }}
-    h1 {{
-      margin: 0 0 8px;
-      font-size: clamp(26px, 4vw, 38px);
-      letter-spacing: 0;
-    }}
-    .subhead {{
-      margin: 0;
-      color: var(--muted);
-      max-width: 820px;
-    }}
-    .notice {{
-      margin-top: 18px;
-      padding: 12px 14px;
-      border: 1px solid #f1c987;
-      background: var(--warn-soft);
-      color: var(--warn);
-      border-radius: 8px;
-      font-weight: 700;
-    }}
-    nav {{
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      padding: 0 0 18px;
-    }}
-    nav a {{
-      color: var(--accent);
-      background: var(--accent-soft);
-      border: 1px solid #b8dfd9;
-      border-radius: 8px;
-      padding: 8px 10px;
-      text-decoration: none;
-      font-weight: 700;
-    }}
-    main {{ padding: 22px 0 38px; }}
-    .page-section {{ margin-bottom: 34px; }}
-    .section-title {{ margin-bottom: 14px; }}
-    .section-title h2 {{
-      margin: 0 0 4px;
-      font-size: 24px;
-    }}
-    .section-title p {{
-      margin: 0;
-      color: var(--muted);
-    }}
-    .news-card, .review-item {{
+    }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    .site-header { background: #fff; border-bottom: 1px solid var(--line); }
+    .hero { padding: 28px 0 20px; }
+    .hero.compact { padding-bottom: 24px; }
+    h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 40px); letter-spacing: 0; }
+    h2 { margin: 0 0 8px; font-size: 24px; }
+    h3 { margin: 0 0 8px; font-size: 18px; }
+    .subhead { margin: 0; color: var(--muted); max-width: 820px; }
+    .notice { margin-top: 18px; padding: 12px 14px; border: 1px solid #f1c987; background: var(--warn-soft); color: var(--warn); border-radius: 8px; font-weight: 700; }
+    nav { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 0 18px; }
+    nav a, .source-link, .detail-link, .back-link { color: var(--accent); font-weight: 700; text-decoration: none; }
+    nav a { background: var(--accent-soft); border: 1px solid #b8dfd9; border-radius: 8px; padding: 8px 10px; }
+    main { padding: 22px 0 38px; }
+    .page-section, .panel { margin-bottom: 24px; }
+    .panel, .overview-card, .news-row, .review-item {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 18px;
-      margin-bottom: 14px;
       box-shadow: 0 1px 2px rgba(23, 32, 51, 0.05);
-    }}
-    .card-head {{
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: flex-start;
-      margin-bottom: 10px;
-    }}
-    .card-head h3, .review-item h3 {{
-      margin: 0 0 8px;
-      font-size: 20px;
-      line-height: 1.35;
-    }}
-    .score {{
-      flex: 0 0 auto;
-      background: #eef2ff;
-      color: #3730a3;
-      border-radius: 999px;
-      padding: 4px 9px;
-      font-size: 13px;
-      font-weight: 700;
-    }}
-    .meta {{
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px 14px;
-      margin: 0 0 14px;
-      padding: 12px;
-      background: #f9fafb;
-      border-radius: 8px;
-    }}
-    .meta .wide {{ grid-column: 1 / -1; }}
-    dt {{
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }}
-    dd {{
-      margin: 2px 0 0;
-      overflow-wrap: anywhere;
-    }}
-    a {{ color: #0b66c3; }}
-    h4 {{
-      margin: 12px 0 6px;
-      font-size: 15px;
-    }}
-    p, ul {{ margin-top: 0; }}
-    .summary ul {{ padding-left: 20px; }}
-    .chips {{
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin: 12px 0;
-    }}
-    .chips div {{
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
-      background: #fcfdff;
-    }}
-    .chips span {{
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }}
-    .chips b {{
-      display: block;
-      font-size: 14px;
-      overflow-wrap: anywhere;
-    }}
-    .table-wrap {{
-      overflow-x: auto;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-    }}
-    table {{
-      border-collapse: collapse;
-      width: 100%;
-      min-width: 620px;
-      background: #fff;
-    }}
-    th, td {{
-      padding: 9px 10px;
-      border-bottom: 1px solid var(--line);
-      text-align: left;
-      white-space: nowrap;
-    }}
-    th {{
-      background: #f9fafb;
-      color: var(--muted);
-      font-size: 12px;
-    }}
-    .muted, .empty {{ color: var(--muted); }}
-    footer {{
-      border-top: 1px solid var(--line);
-      background: #ffffff;
-      padding: 18px 0;
-      color: var(--muted);
-      font-size: 14px;
-    }}
-    @media (max-width: 820px) {{
-      .chips, .meta {{ grid-template-columns: 1fr; }}
-      .card-head {{ display: block; }}
-      .score {{
-        display: inline-block;
-        margin-top: 8px;
-      }}
-    }}
-  </style>
+    }
+    .overview-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin: 18px 0 24px; }
+    .count-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .count-card { background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+    .count-card b { display: block; font-size: 22px; }
+    .watch-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .section-title { margin-bottom: 12px; }
+    .news-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; margin-bottom: 12px; }
+    .news-row h3 { margin-bottom: 8px; line-height: 1.35; }
+    .news-row h3 a { color: var(--text); text-decoration: none; }
+    .meta-line { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+    .summary-text { margin: 0 0 10px; }
+    .compact-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .compact-grid b, .detail-grid b { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+    .badge { display: inline-block; margin: 2px 4px 2px 0; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: #0f5f59; font-weight: 700; font-size: 13px; }
+    .importance { display: inline-block; border-radius: 999px; padding: 3px 8px; font-size: 13px; font-weight: 800; background: #f1f5f9; }
+    .importance.high { color: var(--high); background: #fee2e2; }
+    .importance.medium { color: var(--medium); background: #fef3c7; }
+    .importance.low { color: var(--low); background: #e2e8f0; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    details summary { cursor: pointer; font-weight: 800; color: var(--accent); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin-top: 12px; }
+    table { border-collapse: collapse; width: 100%; min-width: 620px; background: #fff; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+    th { background: #f9fafb; color: var(--muted); font-size: 12px; }
+    .muted, .empty { color: var(--muted); }
+    footer { border-top: 1px solid var(--line); background: #fff; padding: 18px 0; color: var(--muted); font-size: 14px; }
+    @media (max-width: 820px) {
+      .overview-grid, .watch-list, .compact-grid, .detail-grid, .news-row { grid-template-columns: 1fr; }
+      .count-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .detail-link { justify-self: start; }
+    }
+    """
+
+
+def build_dashboard_html(settings: Settings, db: Database) -> str:
+    now = datetime.now(ZoneInfo(settings.timezone))
+    generated_at = now.strftime("%Y-%m-%d %H:%M %Z")
+    rows = db.top_news_for_report(settings.report_lookback_hours, max(settings.max_report_items, 24))
+    categories, top_etfs, top_stocks = _overview(rows)
+    top_rows = rows[:3]
+    rest_rows = rows[3:]
+
+    category_cards = "".join(
+        f'<div class="count-card"><span>{html.escape(category)}</span><b>{categories.get(category, 0)}</b></div>'
+        for category in CATEGORY_ORDER
+        if categories.get(category, 0) > 0
+    )
+    if not category_cards:
+        category_cards = '<p class="empty">当前窗口内暂无可统计新闻。</p>'
+
+    return f"""<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中文投资学习雷达</title>
+  <style>{_styles()}</style>
 </head>
 <body>
-  <header>
+  <header class="site-header">
     <div class="wrap hero">
-      <h1>中文投资学习雷达（免费版）</h1>
-      <p class="subhead">每天用中文整理真实财经新闻，观察新闻如何影响板块、ETF、个股和后续市场表现。生成时间：{html.escape(generated_at)}</p>
-      <div class="notice">{DISCLAIMER}</div>
+      <h1>Investment Learning Radar<br>中文投资学习雷达</h1>
+      <p class="subhead">最后更新时间：{html.escape(generated_at)}</p>
+      <div class="notice">本页面仅用于投资学习和信息整理，不构成任何投资建议。</div>
     </div>
     <nav class="wrap" aria-label="页面导航">
-      <a href="#今日晨报">今日晨报</a>
-      <a href="#美股盘前观察">美股盘前观察</a>
-      <a href="#本周复盘">本周复盘</a>
+      <a href="#overview">今日市场概览</a>
+      <a href="#top">今日最重要新闻</a>
+      <a href="#all">全部新闻</a>
     </nav>
   </header>
   <main class="wrap">
-    {_section("今日晨报", "过去观察窗口内评分最高的全球市场新闻。", morning_rows, db, settings)}
-    {_section("美股盘前观察", "美股开盘前重点观察的宏观、行业和公司新闻。", premarket_rows, db, settings)}
-    <section class="page-section" id="本周复盘">
-      <div class="section-title">
-        <h2>本周复盘</h2>
-        <p>本周重要新闻、当时分析、对应ETF和个股，以及后续涨跌是否明显。</p>
+    <section id="overview" class="overview-grid">
+      <div class="overview-card">
+        <h2>今日市场概览</h2>
+        <p class="muted">今日重点新闻数量：{len(rows)}</p>
+        <div class="count-grid">{category_cards}</div>
       </div>
-      {_weekly_review(weekly_rows, db, settings)}
+      <div class="overview-card">
+        <h2>今日重点观察</h2>
+        <div class="watch-list">
+          <div><h3>ETF/资产</h3>{_badge_list(top_etfs or ['SPY', 'QQQ', 'SOXX', 'XLE', 'TLT'])}</div>
+          <div><h3>个股</h3>{_badge_list(top_stocks or ['NVDA', 'AMD', 'TSM', 'AAPL', 'MSFT'])}</div>
+        </div>
+      </div>
     </section>
+    {_homepage_section("🔥 今日最重要新闻", top_rows, settings, "当前没有可展示的重要新闻。", "top")}
+    {_homepage_section("📰 全部新闻", rest_rows, settings, "当前没有更多新闻。", "all")}
   </main>
   <footer>
-    <div class="wrap">
-      {DISCLAIMER} 新闻事实来自RSS/API原始来源；规则分析只用于学习整理。禁止自动交易，禁止连接IBKR下单接口。
-    </div>
+    <div class="wrap">{DISCLAIMER}</div>
   </footer>
 </body>
 </html>
 """
 
 
+def _write_detail_pages(settings: Settings, db: Database, rows) -> None:
+    news_dir = ROOT_DIR / "docs" / NEWS_DIR
+    news_dir.mkdir(parents=True, exist_ok=True)
+    for path in news_dir.glob("news_*.html"):
+        path.unlink()
+    for row in rows:
+        path = news_dir / _news_filename(row, settings)
+        path.write_text(_detail_page(row, db, settings), encoding="utf-8")
+
+
 def write_dashboard(settings: Settings, db: Database, output_path: Path | None = None) -> Path:
     path = output_path or ROOT_DIR / "docs" / "index.html"
     path.parent.mkdir(parents=True, exist_ok=True)
+    rows = db.top_news_for_report(settings.report_lookback_hours, max(settings.max_report_items, 24))
+    _write_detail_pages(settings, db, rows)
     html_doc = build_dashboard_html(settings, db)
     path.write_text(html_doc, encoding="utf-8")
     if output_path is None:
         (path.parent / "dashboard.html").write_text(html_doc, encoding="utf-8")
     return path
-
