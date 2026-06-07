@@ -39,6 +39,9 @@ docs/news/news_YYYYMMDD_ID.html
 - 关税、制裁、中国、台湾
 - 战争、俄罗斯、乌克兰、NATO、中东
 - ECB、Europe、eurozone
+- AI算力、GPU、数据中心、云计算
+- SpaceX、卫星、火箭、商业航天
+- 核电、电网、AI电力需求、数据中心供电
 
 首页会变成新闻门户式列表，帮助 3 分钟内看完重点：
 
@@ -72,7 +75,51 @@ docs/news/news_YYYYMMDD_ID.html
 - 重要性、影响方向、板块、ETF、个股
 - 折叠的 1天、5天、20天真实涨跌追踪
 
-网页不直接展示英文新闻标题或英文摘要。免费规则模式无法可靠翻译全文时，会明确显示“暂时无法生成中文翻译”，并保留原文链接，不编造内容。
+网页不直接展示英文新闻标题或英文摘要。系统会优先翻译真实原始标题，不再用分类名替代新闻标题。翻译失败时，会明确显示“暂时无法生成中文翻译，请点击原文查看”，并保留原文链接，不编造内容。
+
+## 新闻源覆盖
+
+项目优先使用 RSS/free feeds。当前覆盖：
+
+- Federal Reserve
+- European Central Bank
+- SEC
+- US Treasury
+- IMF
+- World Bank
+- NATO
+- Associated Press
+- CNBC / CNBC Markets / CNBC Economy
+- Financial Times / Financial Times Europe
+- Yahoo Finance
+- MarketWatch
+- Investing.com
+- Eurostat
+- European Commission
+- NASA
+- ESA
+- SpaceNews
+- Space.com
+- US Space Force
+- CoinDesk
+- Cointelegraph
+
+Reuters 公开 RSS 可用性不稳定，因此不会用不可靠第三方源冒充 Reuters 官方源。
+
+## 中文翻译与正文抓取
+
+标题翻译：
+
+- 优先把原始新闻标题翻译成中文。
+- 翻译失败时不显示英文标题，显示“暂时无法生成中文标题，请点击原文查看”。
+
+正文获取优先级：
+
+1. RSS content
+2. RSS summary
+3. 原文页面正文抓取
+
+正文抓取使用 `trafilatura`。免费翻译使用 `deep-translator`。所有抓取和翻译失败都会 graceful fallback，不应导致 GitHub Actions 失败。
 
 ## 安装依赖
 

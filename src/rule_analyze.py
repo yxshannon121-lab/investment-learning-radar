@@ -3,7 +3,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .article_extractor import best_available_text
 from .models import AIAnalysis
+from .translation_utils import TRANSLATION_FALLBACK, split_paragraphs, translate_paragraphs, translate_title
 
 
 RISK_NOTE = "本页面仅用于投资学习和信息整理，不构成任何投资建议。市场有风险，投资需谨慎。"
@@ -23,7 +25,7 @@ class Rule:
 RULES = [
     Rule(
         name_zh="美联储、通胀与利率",
-        keywords=("federal reserve", "fomc", "cpi", "inflation", "rate cut", "interest rate", "jobs report"),
+        keywords=("federal reserve", "fed", "fomc", "cpi", "inflation", "rate cut", "interest rate", "jobs report"),
         sectors=("科技", "银行", "债券"),
         etfs=("SPY", "QQQ", "XLF", "TLT"),
         stocks=("AAPL", "MSFT", "JPM", "BAC"),
@@ -32,12 +34,36 @@ RULES = [
     ),
     Rule(
         name_zh="半导体与人工智能",
-        keywords=("nvidia", "amd", "tsm", "asml", "semiconductor", "chip"),
+        keywords=("nvidia", "amd", "tsm", "asml", "semiconductor", "chip", "gpu"),
         sectors=("半导体", "AI"),
         etfs=("SOXX", "SMH", "QQQ"),
         stocks=("NVDA", "AMD", "TSM", "ASML"),
         direction="不确定",
         reason="芯片和AI相关消息常影响半导体链条、成长股风险偏好和纳斯达克权重股表现。",
+    ),
+    Rule(
+        name_zh="AI算力与数据中心",
+        keywords=(
+            "nvidia",
+            "amd",
+            "tsmc",
+            "asml",
+            "broadcom",
+            "blackwell",
+            "h100",
+            "h200",
+            "b200",
+            "ai datacenter",
+            "data center",
+            "cloud",
+            "inference",
+            "training",
+        ),
+        sectors=("AI", "半导体", "云计算", "数据中心"),
+        etfs=("SOXX", "SMH", "QQQ", "IGV"),
+        stocks=("NVDA", "AMD", "AVGO", "TSM", "ASML", "MSFT", "AMZN", "META", "SMCI", "DELL"),
+        direction="不确定",
+        reason="AI算力、GPU和数据中心消息会影响芯片需求、云厂商资本开支、服务器供应链和科技股估值。",
     ),
     Rule(
         name_zh="原油与能源",
@@ -74,6 +100,37 @@ RULES = [
         stocks=("LMT", "RTX", "XOM", "CVX"),
         direction="不确定",
         reason="冲突风险通常会影响避险资产、能源价格、军工订单预期和市场风险偏好。",
+    ),
+    Rule(
+        name_zh="航天与空间技术",
+        keywords=(
+            "spacex",
+            "starship",
+            "falcon 9",
+            "starlink",
+            "rocket lab",
+            "rklb",
+            "blue origin",
+            "satellite",
+            "launch",
+            "rocket",
+            "spacecraft",
+            "space force",
+        ),
+        sectors=("航天", "卫星", "军工航天"),
+        etfs=("UFO", "ITA"),
+        stocks=("RKLB", "LMT", "RTX", "NOC", "BA", "PL"),
+        direction="不确定",
+        reason="航天发射、卫星网络和军工航天消息会影响商业航天、国防承包商和空间基础设施相关公司。",
+    ),
+    Rule(
+        name_zh="电力与能源基础设施",
+        keywords=("nuclear", "smr", "power grid", "electricity demand", "utility", "data center power"),
+        sectors=("核电", "电网", "能源基础设施", "数据中心供电"),
+        etfs=("XLU", "XLE"),
+        stocks=("CEG", "VST", "NEE", "OKLO", "SMR", "XOM", "CVX"),
+        direction="不确定",
+        reason="AI数据中心和电力需求增长会影响公用事业、核电、电网投资和能源基础设施公司。",
     ),
     Rule(
         name_zh="欧洲央行与欧洲市场",
@@ -124,10 +181,7 @@ def _direction(row, rules: list[Rule]) -> str:
 
 
 def _title_zh(row, rules: list[Rule]) -> str:
-    if rules:
-        topics = "、".join(rule.name_zh for rule in rules[:2])
-        return f"{topics}相关重要新闻"
-    return f"{row['source']}财经新闻"
+    return translate_title(row["title"])
 
 
 def _summary_zh(row, rules: list[Rule]) -> list[str]:
@@ -151,6 +205,30 @@ def _summary_zh(row, rules: list[Rule]) -> list[str]:
     return summary[:5]
 
 
+def _translated_summary(row, rules: list[Rule]) -> list[str]:
+    source_text = row["raw_summary"] or row["title"] or ""
+    translated = translate_paragraphs(split_paragraphs(source_text, max_paragraphs=3), max_chars=1600)
+    if translated:
+        return translated[:3]
+    return _summary_zh(row, rules)[:3]
+
+
+def _translated_content(row, fetch_article: bool) -> tuple[list[str], str]:
+    if not fetch_article:
+        return [], "not_fetched"
+    source_text, source = best_available_text(row)
+    paragraphs = split_paragraphs(source_text, max_paragraphs=80)
+    if not paragraphs:
+        return [], "unavailable"
+    translated = translate_paragraphs(paragraphs)
+    if translated:
+        return translated, source
+    summary_translation = translate_paragraphs(paragraphs[:3], max_chars=1800)
+    if summary_translation:
+        return summary_translation, f"{source}_summary_only"
+    return [], "translation_failed"
+
+
 def _uncertainties(row, rules: list[Rule]) -> list[str]:
     items = ["实际市场影响需要等待价格数据验证。"]
     if not row["raw_summary"]:
@@ -160,7 +238,7 @@ def _uncertainties(row, rules: list[Rule]) -> list[str]:
     return items
 
 
-def analyze_news_row_rules(row) -> AIAnalysis:
+def analyze_news_row_rules(row, fetch_article: bool = False) -> AIAnalysis:
     rules = matched_rules(row)
     sectors = _unique([sector for rule in rules for sector in rule.sectors])
     etfs = _unique([etf for rule in rules for etf in rule.etfs])
@@ -174,10 +252,13 @@ def analyze_news_row_rules(row) -> AIAnalysis:
     if not reasons:
         reasons = ["未匹配到明确主题，先观察大盘ETF表现，避免过度解读单条新闻。"]
 
-    summary = _summary_zh(row, rules)
+    summary = _translated_summary(row, rules)
+    content_zh, content_status = _translated_content(row, fetch_article=fetch_article)
     return AIAnalysis(
         title_zh=_title_zh(row, rules),
         summary_zh=summary,
+        content_zh=content_zh,
+        content_status=content_status,
         confirmed_facts_zh=summary,
         ai_analysis_zh="；".join(reasons),
         affected_sectors=sectors,
@@ -193,4 +274,3 @@ def analyze_news_row_rules(row) -> AIAnalysis:
 
 def contains_latin_text(value: str) -> bool:
     return bool(re.search(r"[A-Za-z]{3,}", value))
-

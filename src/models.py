@@ -27,6 +27,8 @@ class ScoredNews(BaseModel):
 class AIAnalysis(BaseModel):
     title_zh: str = ""
     summary_zh: list[str] = Field(default_factory=list)
+    content_zh: list[str] = Field(default_factory=list)
+    content_status: str = "unavailable"
     confirmed_facts_zh: list[str] = Field(default_factory=list)
     ai_analysis_zh: str = ""
     affected_sectors: list[str] = Field(default_factory=list)

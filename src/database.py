@@ -77,6 +77,8 @@ class Database:
                     score_reasons TEXT DEFAULT '[]',
                     title_zh TEXT,
                     summary_zh TEXT DEFAULT '[]',
+                    content_zh TEXT DEFAULT '[]',
+                    content_status TEXT DEFAULT 'unavailable',
                     analysis_method TEXT DEFAULT '规则分析',
                     ai_summary TEXT,
                     confirmed_facts TEXT,
@@ -130,6 +132,8 @@ class Database:
         columns = {
             "title_zh": "TEXT",
             "summary_zh": "TEXT DEFAULT '[]'",
+            "content_zh": "TEXT DEFAULT '[]'",
+            "content_status": "TEXT DEFAULT 'unavailable'",
             "analysis_method": "TEXT DEFAULT '规则分析'",
         }
         for name, definition in columns.items():
@@ -181,6 +185,8 @@ class Database:
                 SET ai_summary = ?,
                     title_zh = ?,
                     summary_zh = ?,
+                    content_zh = ?,
+                    content_status = ?,
                     analysis_method = ?,
                     confirmed_facts = ?,
                     ai_analysis = ?,
@@ -197,6 +203,8 @@ class Database:
                     "\n".join(analysis.confirmed_facts_zh),
                     analysis.title_zh,
                     json_dumps(analysis.summary_zh),
+                    json_dumps(analysis.content_zh),
+                    analysis.content_status,
                     analysis.analysis_method,
                     json_dumps(analysis.confirmed_facts_zh),
                     analysis.ai_analysis_zh,
@@ -240,6 +248,8 @@ class Database:
                     OR title_zh = ''
                     OR summary_zh IS NULL
                     OR summary_zh = '[]'
+                    OR content_zh IS NULL
+                    OR content_zh = '[]'
                     OR confirmed_facts LIKE '%缺少 OPENAI_API_KEY%'
                     OR ai_summary LIKE '%缺少 OPENAI_API_KEY%'
                   )

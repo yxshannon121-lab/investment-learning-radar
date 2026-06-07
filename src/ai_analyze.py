@@ -40,9 +40,9 @@ def _fallback_analysis(reason: str) -> AIAnalysis:
 
 def analyze_news_row(row, settings: Settings) -> AIAnalysis:
     if not settings.openai_api_key:
-        return analyze_news_row_rules(row)
+        return analyze_news_row_rules(row, fetch_article=True)
     if not settings.enable_openai_analysis:
-        return analyze_news_row_rules(row)
+        return analyze_news_row_rules(row, fetch_article=True)
 
     payload = {
         "title": row["title"],
@@ -54,6 +54,8 @@ def analyze_news_row(row, settings: Settings) -> AIAnalysis:
             "required_schema": {
                 "title_zh": "中文新闻标题，不显示英文原题",
                 "summary_zh": ["3到5条中文摘要，只基于原始标题和RSS摘要"],
+                "content_zh": ["中文正文翻译段落；只能基于原始内容"],
+                "content_status": "rss_content/rss_summary/article_page/unavailable",
                 "confirmed_facts_zh": ["仅基于标题和RSS摘要确认的事实"],
                 "ai_analysis_zh": "为什么可能影响市场；不能添加原文没有的事实",
             "affected_sectors": ["半导体", "AI", "能源", "银行", "军工", "加密货币", "消费", "医疗"],
@@ -83,13 +85,15 @@ def analyze_news_row(row, settings: Settings) -> AIAnalysis:
         parsed = json.loads(content)
         analysis = AIAnalysis.model_validate(parsed)
         analysis.analysis_method = "AI增强分析"
-        if not analysis.title_zh or not analysis.summary_zh:
-            rule_analysis = analyze_news_row_rules(row)
+        if not analysis.title_zh or not analysis.summary_zh or not analysis.content_zh:
+            rule_analysis = analyze_news_row_rules(row, fetch_article=True)
             analysis.title_zh = analysis.title_zh or rule_analysis.title_zh
             analysis.summary_zh = analysis.summary_zh or rule_analysis.summary_zh
+            analysis.content_zh = analysis.content_zh or rule_analysis.content_zh
+            analysis.content_status = analysis.content_status or rule_analysis.content_status
         return analysis
     except (ImportError, Exception, json.JSONDecodeError, ValidationError):
-        return analyze_news_row_rules(row)
+        return analyze_news_row_rules(row, fetch_article=True)
 
 
 def row_list(row, key: str) -> list[str]:

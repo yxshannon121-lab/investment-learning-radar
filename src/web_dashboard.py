@@ -30,6 +30,15 @@ SECTOR_TO_CATEGORY = {
     "欧洲市场": "欧洲市场",
     "银行": "宏观经济",
     "债券": "宏观经济",
+    "云计算": "科技/AI",
+    "数据中心": "科技/AI",
+    "航天": "地缘政治",
+    "卫星": "地缘政治",
+    "军工航天": "地缘政治",
+    "核电": "能源",
+    "电网": "能源",
+    "能源基础设施": "能源",
+    "数据中心供电": "能源",
 }
 
 
@@ -102,6 +111,7 @@ def _analysis_for_display(row) -> dict[str, object]:
     title_zh = row["title_zh"] or rule_fallback.title_zh
     summary_zh = json_loads(row["summary_zh"], []) or rule_fallback.summary_zh
     facts = json_loads(row["confirmed_facts"], []) or summary_zh
+    content_zh = json_loads(row["content_zh"], [])
     sectors = json_loads(row["affected_sectors"], []) or rule_fallback.affected_sectors
     etfs = json_loads(row["observed_etfs"], []) or rule_fallback.observed_etfs
     stocks = json_loads(row["observed_stocks"], []) or rule_fallback.observed_stocks
@@ -110,6 +120,8 @@ def _analysis_for_display(row) -> dict[str, object]:
         "title_zh": title_zh,
         "summary_zh": summary_zh,
         "facts": facts,
+        "content_zh": content_zh,
+        "content_status": row["content_status"] or "unavailable",
         "sectors": sectors,
         "etfs": etfs,
         "stocks": stocks,
@@ -143,6 +155,15 @@ def _overview(rows) -> tuple[Counter, list[str], list[str]]:
     top_etfs = [symbol for symbol, _ in etfs.most_common(8)]
     top_stocks = [symbol for symbol, _ in stocks.most_common(8)]
     return categories, top_etfs, top_stocks
+
+
+def _track_counts(rows) -> Counter:
+    counts: Counter = Counter()
+    for row in rows:
+        display = _analysis_for_display(row)
+        for sector in display["sectors"]:
+            counts[str(sector)] += 1
+    return counts
 
 
 def _market_table(db: Database, news_id: int) -> str:
@@ -206,27 +227,29 @@ def _homepage_section(title: str, rows, settings: Settings, empty_text: str, sec
 
 
 def _translation_block(row, display: dict[str, object]) -> str:
+    content = [str(item) for item in display.get("content_zh", []) if str(item).strip()]
     summary_items = "".join(f"<li>{html.escape(item)}</li>" for item in display["summary_zh"])
-    has_ai_translation = display["method"] == "AI增强分析" and display["summary_zh"]
-    if has_ai_translation:
+    if content:
+        first = content[:4]
+        rest = content[4:]
+        first_html = "".join(f"<p>{html.escape(item)}</p>" for item in first)
+        if rest:
+            rest_html = "".join(f"<p>{html.escape(item)}</p>" for item in rest)
+            more = f"<details><summary>展开全文</summary>{rest_html}</details>"
+        else:
+            more = ""
         return f"""
         <section class="panel">
           <h2>中文全文翻译</h2>
-          <p class="muted">以下中文内容来自可选增强分析，仅基于 RSS/API 提供的原始字段生成。</p>
-          <ul>{summary_items}</ul>
+          {first_html}
+          {more}
         </section>
         """
 
-    source_has_text = bool((row["raw_content"] or "").strip() or (row["raw_summary"] or "").strip())
-    message = "免费规则模式暂时无法生成完整中文翻译。"
-    if source_has_text:
-        message += "系统已保留原文链接，并在下方提供基于 RSS/API 字段的中文摘要。"
-    else:
-        message += "该 RSS/API 来源未提供可翻译的摘要或正文。"
     return f"""
     <section class="panel">
       <h2>中文全文翻译</h2>
-      <p>{html.escape(message)}</p>
+      <p>暂时无法生成中文翻译，请点击原文查看</p>
       <h3>中文摘要</h3>
       <ul>{summary_items}</ul>
     </section>
@@ -369,6 +392,7 @@ def build_dashboard_html(settings: Settings, db: Database) -> str:
     generated_at = now.strftime("%Y-%m-%d %H:%M %Z")
     rows = db.top_news_for_report(settings.report_lookback_hours, max(settings.max_report_items, 24))
     categories, top_etfs, top_stocks = _overview(rows)
+    tracks = _track_counts(rows)
     top_rows = rows[:3]
     rest_rows = rows[3:]
 
@@ -415,6 +439,12 @@ def build_dashboard_html(settings: Settings, db: Database) -> str:
           <div><h3>个股</h3>{_badge_list(top_stocks or ['NVDA', 'AMD', 'TSM', 'AAPL', 'MSFT'])}</div>
         </div>
       </div>
+    </section>
+    <section class="page-section">
+      <div class="section-title">
+        <h2>今日重点赛道</h2>
+      </div>
+      {_badge_list([f"{name}（{count}条）" for name, count in tracks.most_common(10)])}
     </section>
     {_homepage_section("🔥 今日最重要新闻", top_rows, settings, "当前没有可展示的重要新闻。", "top")}
     {_homepage_section("📰 全部新闻", rest_rows, settings, "当前没有更多新闻。", "all")}
